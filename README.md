@@ -5,7 +5,7 @@ You can add your world files via the 'right-click' context menu then browse to f
 
 Once added you can specify the number of backup files you wish to keep and as backups occur the oldest
 will be deleted as needed. The backup files are saved in the same folder as the .ARK file and are 
-embedded in a .ZIP file along with any .ARKProflie and .ARKTribe files in the same folder. 
+embedded in a .ZIP file along with any .ARKProfile and .ARKTribe files in the same folder. 
 
 There is no need to configure the frequenycy of the backup, a fresh backup will occur automatically
 every time the world is saved (default of 15 minutes). 

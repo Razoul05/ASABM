@@ -190,7 +190,10 @@ namespace ASABM
                 {
                     String AntiCorruption = thisFile.Replace(Path.GetExtension(thisFile), @"_AntiCorruptionBackup.bak");
                     if (File.Exists(AntiCorruption) && Math.Abs(((TimeSpan)(File.GetLastWriteTime(thisFile) - File.GetLastWriteTime(AntiCorruption))).TotalMinutes) <= 1)
+                    {
+                        watcher.EnableRaisingEvents = true; //allow events to be raised again
                         return; //If the target file and anticorruption have the same timestamp +- 1 minute we are on server startup and can skip this backup
+                    }
 
                     //We'll backup ALL arkprofiles and arktribes in the same folder as the world file even if they were not updated
                     List<String> otherFiles = new List<String>();

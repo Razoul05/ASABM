@@ -39,12 +39,14 @@ namespace ASABM
             this.components = new System.ComponentModel.Container();
             this.ofd_FindArk = new System.Windows.Forms.OpenFileDialog();
             this.d_BackupList = new System.Windows.Forms.DataGridView();
-            this.c_ARKName = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.c_BackupCount = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.c_LastBackup = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.cm_ContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.cm_Add = new System.Windows.Forms.ToolStripMenuItem();
             this.cm_Remove = new System.Windows.Forms.ToolStripMenuItem();
+            this.f_BackupFolderBrowser = new System.Windows.Forms.FolderBrowserDialog();
+            this.c_ARKName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.c_BackupPath = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.c_BackupCount = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.c_LastBackup = new System.Windows.Forms.DataGridViewTextBoxColumn();
             ((System.ComponentModel.ISupportInitialize)(this.d_BackupList)).BeginInit();
             this.cm_ContextMenu.SuspendLayout();
             this.SuspendLayout();
@@ -62,6 +64,7 @@ namespace ASABM
             this.d_BackupList.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.d_BackupList.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.c_ARKName,
+            this.c_BackupPath,
             this.c_BackupCount,
             this.c_LastBackup});
             this.d_BackupList.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -73,28 +76,6 @@ namespace ASABM
             this.d_BackupList.CellValueChanged += new System.Windows.Forms.DataGridViewCellEventHandler(this.d_BackupList_CellValueChanged);
             this.d_BackupList.SelectionChanged += new System.EventHandler(this.d_BackupList_SelectionChanged);
             this.d_BackupList.Click += new System.EventHandler(this.d_BackupList_Click);
-            // 
-            // c_ARKName
-            // 
-            this.c_ARKName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.c_ARKName.HeaderText = "ARK Name";
-            this.c_ARKName.Name = "c_ARKName";
-            this.c_ARKName.ReadOnly = true;
-            this.c_ARKName.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.c_ARKName.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
-            // 
-            // c_BackupCount
-            // 
-            this.c_BackupCount.HeaderText = "Backup Count";
-            this.c_BackupCount.Name = "c_BackupCount";
-            // 
-            // c_LastBackup
-            // 
-            this.c_LastBackup.HeaderText = "Last Backup";
-            this.c_LastBackup.MinimumWidth = 150;
-            this.c_LastBackup.Name = "c_LastBackup";
-            this.c_LastBackup.ReadOnly = true;
-            this.c_LastBackup.Width = 150;
             // 
             // cm_ContextMenu
             // 
@@ -118,6 +99,36 @@ namespace ASABM
             this.cm_Remove.Size = new System.Drawing.Size(117, 22);
             this.cm_Remove.Text = "Remove";
             this.cm_Remove.Click += new System.EventHandler(this.cm_Remove_Click);
+            // 
+            // c_ARKName
+            // 
+            this.c_ARKName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.c_ARKName.HeaderText = "ARK Name";
+            this.c_ARKName.Name = "c_ARKName";
+            this.c_ARKName.ReadOnly = true;
+            this.c_ARKName.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            this.c_ARKName.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
+            // 
+            // c_BackupPath
+            // 
+            this.c_BackupPath.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.c_BackupPath.HeaderText = "Backup Path";
+            this.c_BackupPath.Name = "c_BackupPath";
+            this.c_BackupPath.ReadOnly = true;
+            this.c_BackupPath.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.NotSortable;
+            // 
+            // c_BackupCount
+            // 
+            this.c_BackupCount.HeaderText = "Backup Count";
+            this.c_BackupCount.Name = "c_BackupCount";
+            // 
+            // c_LastBackup
+            // 
+            this.c_LastBackup.HeaderText = "Last Backup";
+            this.c_LastBackup.MinimumWidth = 150;
+            this.c_LastBackup.Name = "c_LastBackup";
+            this.c_LastBackup.ReadOnly = true;
+            this.c_LastBackup.Width = 150;
             // 
             // Main
             // 
@@ -144,7 +155,9 @@ namespace ASABM
         private System.Windows.Forms.ContextMenuStrip cm_ContextMenu;
         private System.Windows.Forms.ToolStripMenuItem cm_Add;
         private System.Windows.Forms.ToolStripMenuItem cm_Remove;
+        private System.Windows.Forms.FolderBrowserDialog f_BackupFolderBrowser;
         private System.Windows.Forms.DataGridViewTextBoxColumn c_ARKName;
+        private System.Windows.Forms.DataGridViewTextBoxColumn c_BackupPath;
         private System.Windows.Forms.DataGridViewTextBoxColumn c_BackupCount;
         private System.Windows.Forms.DataGridViewTextBoxColumn c_LastBackup;
     }

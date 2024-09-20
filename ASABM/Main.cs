@@ -12,6 +12,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net.NetworkInformation;
 using System.Configuration;
+using System.Reflection;
 
 namespace ASABM
 {
@@ -29,28 +30,51 @@ namespace ASABM
         private void Main_Shown(object sender, EventArgs e)
         {
             Configuration config = ConfigurationManager.OpenExeConfiguration(Application.ExecutablePath); //Get app config from current exe path
-            for (int cnt = 0; cnt < config.AppSettings.Settings.Count; cnt++) //loop through each of the backup rules in the config file
+
+            if (config.AppSettings.Settings["version"] == null) //This config is from Version 1.0; we neet to update the config format
             {
-                String path = config.AppSettings.Settings["world" + cnt.ToString()].Value.Split(';')[0]; //each rule has a path;count, split them up
-                int count;
+                for (int cnt = 0; cnt < config.AppSettings.Settings.Count; cnt++)
+                {
+                    //This will update each config from: worldAndPath;backupCount 
+                    //  to: worldAndPath;backupPath;backupCount
+                    List<String> thisKey = config.AppSettings.Settings["world" + cnt.ToString()].Value.Split(';').ToList();
+                    config.AppSettings.Settings["world" + cnt.ToString()].Value = thisKey[0] + ";" + Path.GetDirectoryName(thisKey[0]) + ";" + thisKey[1];
+                }
+
+                config.AppSettings.Settings.Add("version", Assembly.GetExecutingAssembly().GetName().Version.ToString());
+                config.Save();
+                ConfigurationManager.RefreshSection(config.AppSettings.SectionInformation.Name);
+            }
+
+            //We want to loop through this loop one fewer times than the count because of the "version" key that
+            // is included in the total count
+            for (int cnt = 0; cnt < config.AppSettings.Settings.Count - 1; cnt++)
+            {
+                List<String> thisKey = config.AppSettings.Settings["world" + cnt.ToString()].Value.Split(';').ToList(); //each rule has a worldPath;backupPath;count, split them up
+                String ark_world = thisKey[0]; 
+                String backup_path = thisKey[1];
+                int backup_count;
                 try
                 {
-                    count = Int32.Parse(config.AppSettings.Settings["world" + cnt.ToString()].Value.Split(';')[1]); //attempt to convert the count to an integer
+                    backup_count = Int32.Parse(thisKey[2]); //attempt to convert the count to an integer
                 }
                 catch
                 {
-                    count = 10; //default to 10 if int conversion fails
+                    backup_count = 10; //default to 10 if int conversion fails
+                    config.AppSettings.Settings["world" + cnt.ToString()].Value = thisKey[0] + ";" + thisKey[1] + ";" + backup_count.ToString();
+                    config.Save();
                 }
 
                 //Add new item to datagrid
                 int newrow = d_BackupList.Rows.Add();
-                d_BackupList["c_ARKName", newrow].Value = path;
-                d_BackupList["c_BackupCount", newrow].Value = count;
+                d_BackupList["c_ARKName", newrow].Value = ark_world;
+                d_BackupList["c_BackupPath", newrow].Value = backup_path;
+                d_BackupList["c_BackupCount", newrow].Value = backup_count;
                 d_BackupList.ClearSelection();
 
                 //start file system watcher for this file
-                FileSystemWatcher watcher = new FileSystemWatcher(Path.GetDirectoryName(path));
-                watcher.Filter = Path.GetFileName(path);
+                FileSystemWatcher watcher = new FileSystemWatcher(Path.GetDirectoryName(ark_world));
+                watcher.Filter = Path.GetFileName(ark_world);
                 watcher.NotifyFilter = NotifyFilters.LastWrite;
                 watcher.Changed += WatcherFileChanged;
                 watcher.EnableRaisingEvents = true;
@@ -91,8 +115,10 @@ namespace ASABM
 
             //Update new backup count in config file
             Configuration config = ConfigurationManager.OpenExeConfiguration(Application.ExecutablePath);
-            config.AppSettings.Settings.Remove("world" + e.RowIndex); //we need to remove this world from the config file
-            config.AppSettings.Settings.Add("world" + e.RowIndex, d_BackupList["c_ARKName", e.RowIndex].Value.ToString() + ";" + newCount.ToString()); //we'll re-add it to the config file with the new value
+            config.AppSettings.Settings["world" + e.RowIndex.ToString()].Value = 
+                d_BackupList["c_ARKName", e.RowIndex].Value.ToString() 
+                + ";" + d_BackupList["c_BackupPath", e.RowIndex].Value.ToString() 
+                + ";" + newCount.ToString();
             config.Save();
             ConfigurationManager.RefreshSection(config.AppSettings.SectionInformation.Name);
         }
@@ -116,6 +142,28 @@ namespace ASABM
 
                 cm_ContextMenu.Show(Cursor.Position); //show context menu at current mouse position.
             }
+            else if (me.Button == MouseButtons.Left)
+            {
+                DataGridView.HitTestInfo hti = d_BackupList.HitTest(me.X, me.Y);
+                if (hti.RowIndex >= 0 && hti.ColumnIndex == d_BackupList.Columns["c_BackupPath"].Index) //This is a LEFT CLICK in the backup column of the grid
+                {
+                    int thisRow = hti.RowIndex;
+                    f_BackupFolderBrowser.Reset();
+                    f_BackupFolderBrowser.SelectedPath = d_BackupList["c_BackupPath", thisRow].Value.ToString(); //Set dialog path to current backup path
+                    if (f_BackupFolderBrowser.ShowDialog() == DialogResult.OK)
+                    {
+                        //OK was clicked on the dialg, grap and store the updated path
+                        d_BackupList["c_BackupPath", thisRow].Value = f_BackupFolderBrowser.SelectedPath;
+                        Configuration config = ConfigurationManager.OpenExeConfiguration(Application.ExecutablePath);
+                        config.AppSettings.Settings["world" + thisRow.ToString()].Value =
+                            d_BackupList["c_ARKName", thisRow].Value.ToString()
+                            + ";" + d_BackupList["c_BackupPath", thisRow].Value.ToString()
+                            + ";" + d_BackupList["c_BackupCount", thisRow].Value.ToString();
+                        config.Save();
+                        ConfigurationManager.RefreshSection(config.AppSettings.SectionInformation.Name);
+                    }
+                }
+            }
         }
 
         private void cm_Add_Click(object sender, EventArgs e)
@@ -133,13 +181,14 @@ namespace ASABM
                 rowAdding = true; //We're adding a row so set this to prevent value changed events from being processed
                 int newrow = d_BackupList.Rows.Add();
                 d_BackupList["c_ARKName", newrow].Value = ofd_FindArk.FileName; //the full filename goes in the column ARKName
+                d_BackupList["c_BackupPath", newrow].Value = Path.GetDirectoryName(ofd_FindArk.FileName); //use the path to the world for default backup path
                 d_BackupList["c_BackupCount", newrow].Value = 10; //We'll default the backup count to 10
                 d_BackupList.ClearSelection(); //Clear the selected row
                 rowAdding = false; //we're done adding so events can be handeled again.
 
                 //Write this new world to the config file
                 Configuration config = ConfigurationManager.OpenExeConfiguration(Application.ExecutablePath);
-                config.AppSettings.Settings.Add("world" + config.AppSettings.Settings.Count.ToString(), ofd_FindArk.FileName + ";10");
+                config.AppSettings.Settings.Add("world" + (config.AppSettings.Settings.Count -1).ToString(), ofd_FindArk.FileName + ";" + Path.GetDirectoryName(ofd_FindArk.FileName) + ";10");
                 config.Save();
                 ConfigurationManager.RefreshSection(config.AppSettings.SectionInformation.Name);
 
@@ -200,13 +249,14 @@ namespace ASABM
                     otherFiles.AddRange(Directory.GetFiles(Path.GetDirectoryName(thisFile), "*.arkprofile").ToList());
                     otherFiles.AddRange(Directory.GetFiles(Path.GetDirectoryName(thisFile), "*.arktribe").ToList());
 
-                    ZipArchive zip = ZipFile.Open(Path.GetDirectoryName(thisFile) + @"\Backup_" + Path.GetFileNameWithoutExtension(thisFile) + "_" + DateTime.Now.ToString("yyyy.MM.dd_HH.mm.ss") + ".zip", ZipArchiveMode.Create);
+                    String backupPath = d_BackupList["c_BackupPath", row].Value.ToString(); //This is the path to write the backup to
+                    ZipArchive zip = ZipFile.Open(backupPath + @"\Backup_" + Path.GetFileNameWithoutExtension(thisFile) + "_" + DateTime.Now.ToString("yyyy.MM.dd_HH.mm.ss") + ".zip", ZipArchiveMode.Create);
                     zip.CreateEntryFromFile(thisFile, Path.GetFileName(thisFile)); //Add world file to new zip file
                     foreach (String file in otherFiles)
                         zip.CreateEntryFromFile(file, Path.GetFileName(file)); //add other files to zip file
                     zip.Dispose(); //close zip file
 
-                    List<String> otherBackups = Directory.GetFiles(Path.GetDirectoryName(thisFile), @"Backup_" + Path.GetFileNameWithoutExtension(thisFile) + "*.zip").ToList(); //Find all backups for this world
+                    List<String> otherBackups = Directory.GetFiles(backupPath, @"Backup_" + Path.GetFileNameWithoutExtension(thisFile) + "*.zip").ToList(); //Find all backups for this world
                     otherBackups.Sort(); //sort the list, this should put the oldest at the top
 
                     while (otherBackups.Count > Int32.Parse(d_BackupList["c_BackupCount", row].Value.ToString())) //loop as long as we have more than the max count
